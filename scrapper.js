@@ -5,7 +5,7 @@ const url =
 	'https://www.thekingofparfums.com.br/lacrado/lattafa/?mpage=2&Volume=100%20Ml|100ml|100ml%20Sem%20Caixa|1oo%20Ml'
 
 // Faça conecção com o Gemini
-const APIKey = `AIzaSyCZ6q1Bp27qpYsQ4XynE8M2dQUdBysbZfU`
+const APIKey = ``
 const genAI = new GoogleGenerativeAI(APIKey)
 
 export const scrapper = async () => {
