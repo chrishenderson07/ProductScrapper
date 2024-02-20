@@ -1,6 +1,9 @@
 import { createObjectCsvWriter } from 'csv-writer'
 import puppeteer from 'puppeteer'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 const sizeML = '100 ml'
 
@@ -91,6 +94,19 @@ const csvWriter = createObjectCsvWriter({
 			default: 1,
 		},
 		{ id: 'Atributo global 1', title: 'Atributo global 1', default: 1 },
+		{
+			id: 'Metadado: _yoast_wpseo_title',
+			title: 'Metadado: _yoast_wpseo_title',
+		},
+
+		{
+			id: 'Metadado: _yoast_wpseo_metadesc',
+			title: 'Metadado: _yoast_wpseo_metadesc',
+		},
+		{
+			id: 'Metadado: _yoast_wpseo_focuskw',
+			title: 'Metadado: _yoast_wpseo_focuskw',
+		},
 	],
 
 	fieldDelimiter: ',',
@@ -100,10 +116,9 @@ const csvWriter = createObjectCsvWriter({
 // Scrapper
 
 const url =
-	'https://www.thekingofparfums.com.br/lacrado/lattafa/?mpage=2&Volume=90%20Ml'
-
+	'https://www.thekingofparfums.com.br/lacrado/masculino/lacrado-masculino-armaf/?Tamanho=100%20Ml|100ml|100ml%20Sem%20Caixa|105%20Ml|105%20Ml%20Tester|105ml'
 // Faça conecção com o Gemini
-const APIKey = ``
+const APIKey = process.env.GEMINI_API_KEY
 const genAI = new GoogleGenerativeAI(APIKey)
 
 const scrapper = async () => {
@@ -120,16 +135,51 @@ const scrapper = async () => {
 		const produtos = []
 
 		elementos.forEach((elemento) => {
+			const sizeML = '100 ml'
+
 			if (elemento && elemento.textContent.trim()) {
 				const scriptElement = elemento.querySelector(
 					'script[type="application/ld+json"]',
 				)
 				if (scriptElement && scriptElement.textContent.trim()) {
 					const json = JSON.parse(scriptElement.textContent)
-					if (json && json.name && json.description) {
+					if (json && json.name && json.description && json.image) {
 						produtos.push({
-							name: json.name,
-							description: json.description,
+							Tipo: 'variable',
+							Nome: json.name,
+							Publicado: 1,
+							'Em destaque?': 0,
+							'Visibilidade no catálogo': 'visible',
+							'Descrição curta': json.description.slice(0, 100) + '...',
+							Descrição: json.description,
+							'Data de preço promocional começa em': '',
+							'Data de preço promocional termina em': '',
+							'Status do imposto': 'taxable',
+							'Classe de imposto': '',
+							'Em estoque?': 1,
+							Estoque: 0,
+							'Quantidade baixa de estoque': 10,
+							'São permitidas encomendas?': 0,
+							'Vendido individualmente?': 1,
+							'Peso (kg)': 0.5,
+							'Comprimento (cm)': 15,
+							'Largura (cm)': 10,
+							'Altura (cm)': 5,
+							'Permitir avaliações de clientes?': 1,
+							'Nota da compra': '',
+							'Preço promocional': '',
+							Categorias: 'Marcas, Armaf, Perfumes, Masculino',
+							// Tags: 'amadeirado, cítrico, masculino',
+							Imagens: json.image,
+							Posição: 0,
+							'Nome do atributo 1': 'Tamanho',
+							'Valores do atributo 1': sizeML,
+							'Visibilidade do atributo 1': 1,
+							'Atributo global 1': 1,
+
+							'Metadado: _yoast_wpseo_title': 'Perfume ' + json.name,
+							'Metadado: _yoast_wpseo_metadesc': json.description.slice(0, 150),
+							'Metadado: _yoast_wpseo_focuskw': 'Perfume ' + json.name,
 						})
 					}
 				}
@@ -147,11 +197,11 @@ const scrapper = async () => {
 		console.log('Produto:', produto)
 		try {
 			const newDescription = await geminiHelper(
-				JSON.stringify(produto.description),
+				JSON.stringify(produto.Descrição),
 			)
 
 			console.log('Nova descrição:', newDescription)
-			produto.description = newDescription
+			produto.Descrição = newDescription
 			produtosComNovasDescricoes.push(produto)
 		} catch (error) {
 			console.error('Erro ao obter descrição do produto:', error)
@@ -164,7 +214,8 @@ const scrapper = async () => {
 
 // Definindo a função geminiHelper
 async function geminiHelper(description) {
-	const usePrompt = 'Crie uma boa descrição para o produto ' + description
+	const usePrompt =
+		'Crie uma boa descrição e detalhada para o produto: ' + description
 	try {
 		const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
 		const result = await model.generateContent(usePrompt)
@@ -178,7 +229,6 @@ async function geminiHelper(description) {
 
 const produtosComNovasDescricoes = await scrapper()
 
-console.log('Produtos com novas descrições:', produtosComNovasDescricoes)
 console.log(typeof produtosComNovasDescricoes)
 csvWriter
 	.writeRecords(produtosComNovasDescricoes)

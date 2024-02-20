@@ -1,11 +1,14 @@
 import puppeteer from 'puppeteer'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import dotenv from 'dotenv'
+
+dotenv.config()
 
 const url =
 	'https://www.thekingofparfums.com.br/lacrado/lattafa/?mpage=2&Volume=100%20Ml|100ml|100ml%20Sem%20Caixa|1oo%20Ml'
 
 // Faça conecção com o Gemini
-const APIKey = ``
+const APIKey = process.env.GEMINI_API_KEY
 const genAI = new GoogleGenerativeAI(APIKey)
 
 export const scrapper = async () => {
